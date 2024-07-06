@@ -13,10 +13,11 @@
   "license": "ISC",
   "description": "Backend server for handling API requests and business logic of the project.",
   "dependencies": {
-    "africastalking": "^0.6.7",
     "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "twilio": "^5.2.0"
+    "mongoose": "^8.4.5",
+    "ws": "^8.18.0"
   }
 }
