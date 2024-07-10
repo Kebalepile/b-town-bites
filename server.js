@@ -15,6 +15,8 @@ const port = process.env.PORT || 5000;
 // const allowedOrigins = ["http://localhost:5173", "http://localhost:5173/"];  // developement
 
 const allowedOrigins = [
+  "https://boitekongeats.co.za/",
+  "https://boitekongeats.co.za",
   "https://btownbites.github.io/",
   "https://btownbites.github.io"
 ]; //production
