@@ -12,14 +12,12 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// const allowedOrigins = ["http://localhost:5173", "http://localhost:5173/"];  // developement
+// Parse the URLs from the environment variables
+const devUrls = process.env.DEV_URLS.split(",");
+const prodUrls = process.env.PROD_URLS.split(",");
 
-const allowedOrigins = [
-  "https://boitekongeats.co.za/",
-  "https://boitekongeats.co.za",
-  "https://btownbites.github.io/",
-  "https://btownbites.github.io"
-]; //production
+const allowedOrigins =
+  process.env.NODE_ENV === "production" ? prodUrls : devUrls;
 
 const corsOptions = {
   origin: function(origin, callback) {
@@ -30,6 +28,7 @@ const corsOptions = {
     }
   }
 };
+
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
@@ -205,10 +204,34 @@ app.post("/process-payment", async (req, res) => {
   }
 });
 
+app.post("/send-sms", async (req, res) => {
+  const { to, message } = req.body;
+
+  try {
+    const response = await axios.get(
+      `https://platform.clickatell.com/messages/http/send`,
+      {
+        params: {
+          apiKey: process.env.CLICKATELL_API_KEY,
+          to: to,
+          content: message
+        }
+      }
+    );
+
+    const data = response.data;
+
+    if (data.messages && data.messages[0].accepted) {
+      res.status(200).json({ success: true });
+    } else {
+      res.status(500).json({ success: false, error: "Failed to send SMS" });
+    }
+  } catch (error) {
+    console.error("Error sending SMS:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-
-// function generateOrderNumber() {
-//   return Math.floor(Math.random() * 1000000).toString();
-// }
