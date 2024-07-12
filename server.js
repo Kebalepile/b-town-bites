@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const Order = require("./models/order"); // Import the order model
+const Order = require("./models/order"); 
 const WebSocket = require("ws");
 const http = require("http");
 const axios = require("axios");
@@ -60,6 +60,45 @@ const notifyClients = data => {
   });
 };
 
+const sendResponse = (res, status, data) => {
+  res.status(status).json(data);
+};
+
+const handleError = (res, error) => {
+  console.error("Error:", error);
+  res.status(500).json({ error: error.message });
+};
+
+const validateOrderFields = ({
+  orderNumber,
+  name,
+  paymentMethod,
+  paymentTotal,
+  paymentItemsDescriptions
+}) => {
+  return (
+    orderNumber &&
+    name &&
+    paymentMethod &&
+    paymentTotal !== undefined &&
+    paymentItemsDescriptions
+  );
+};
+
+const sendSMS = async (phone, message) => {
+  const response = await axios.get(
+    `https://platform.clickatell.com/messages/http/send`,
+    {
+      params: {
+        apiKey: process.env.CLICKATELL_API_KEY,
+        to: phone,
+        content: message
+      }
+    }
+  );
+  return response.data;
+};
+
 app.post("/orders", async (req, res) => {
   const {
     name,
@@ -73,15 +112,8 @@ app.post("/orders", async (req, res) => {
     orderNumber
   } = req.body;
 
-  // Ensure all required fields are provided
-  if (
-    !orderNumber ||
-    !name ||
-    !paymentMethod ||
-    paymentTotal === undefined ||
-    !paymentItemsDescriptions
-  ) {
-    return res.status(400).json({ error: "Missing required fields" });
+  if (!validateOrderFields(req.body)) {
+    return sendResponse(res, 400, { error: "Missing required fields" });
   }
 
   const newOrder = new Order({
@@ -100,21 +132,19 @@ app.post("/orders", async (req, res) => {
 
   try {
     const savedOrder = await newOrder.save();
-    res.status(201).json(newOrder);
-
-    // Notify all connected clients
+    sendResponse(res, 201, newOrder);
     notifyClients({ type: "newOrder", order: newOrder });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    handleError(res, error);
   }
 });
 
 app.get("/orders", async (req, res) => {
   try {
     const orders = await Order.find({});
-    res.status(200).json(orders);
+    sendResponse(res, 200, orders);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    handleError(res, error);
   }
 });
 
@@ -124,11 +154,11 @@ app.get("/orders/:orderNumber", async (req, res) => {
   try {
     const order = await Order.findOne({ orderNumber });
     if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      return sendResponse(res, 404, { message: "Order not found" });
     }
-    res.status(200).json(order);
+    sendResponse(res, 200, order);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    handleError(res, error);
   }
 });
 
@@ -142,15 +172,13 @@ app.put("/orders/:id", async (req, res) => {
     });
 
     if (!updatedOrder) {
-      return res.status(404).json({ message: "Order not found" });
+      return sendResponse(res, 404, { message: "Order not found" });
     }
 
-    res.status(200).json(updatedOrder);
-
-    // Notify all connected clients
+    sendResponse(res, 200, updatedOrder);
     notifyClients({ type: "updateOrder", order: updatedOrder });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    handleError(res, error);
   }
 });
 
@@ -158,18 +186,34 @@ app.delete("/orders/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
+    const order = await Order.findById(id);
+    if (!order) {
+      return sendResponse(res, 404, { message: "Order not found" });
+    }
+
     const deletedOrder = await Order.findByIdAndDelete(id);
 
     if (!deletedOrder) {
-      return res.status(404).json({ message: "Order not found" });
+      return sendResponse(res, 404, { message: "Order not found" });
     }
 
-    res.status(200).json({ message: "Order deleted successfully" });
+    const { phone: originalPhone, name, orderNumber } = order;
+    const phone = formatCellNumber(originalPhone);
 
-    // Notify all connected clients
+    const message = `Dear ${name}, your order no: ${orderNumber} has been fulfilled. Boitekong Eats 😋`;
+    
+    const data = await sendSMS(phone, message);
+
+    if (data.messages && data.messages[0].accepted) {
+      console.log("SMS sent successfully");
+    } else {
+      console.error("Failed to send SMS");
+    }
+
+    sendResponse(res, 200, { message: "Order deleted successfully" });
     notifyClients({ type: "deleteOrder", orderId: id });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    handleError(res, error);
   }
 });
 
@@ -181,12 +225,12 @@ app.post("/process-payment", async (req, res) => {
       "https://online.yoco.com/v1/charges/",
       {
         token: token,
-        amountInCents: (paymentTotal + deliveryCharge) * 100, // Convert to cents
+        amountInCents: (paymentTotal + deliveryCharge) * 100,
         currency: "ZAR"
       },
       {
         headers: {
-          "X-Auth-Secret-Key": process.env.YOCO_SECRET_KEY // Use your actual secret key
+          "X-Auth-Secret-Key": process.env.YOCO_SECRET_KEY
         }
       }
     );
@@ -194,13 +238,12 @@ app.post("/process-payment", async (req, res) => {
     console.log("Yoco response:", response.data);
 
     if (response.data.status === "successful") {
-      res.json({ success: true });
+      sendResponse(res, 200, { success: true });
     } else {
-      res.json({ success: false });
+      sendResponse(res, 500, { success: false });
     }
   } catch (error) {
-    console.error("Error processing payment:", error);
-    res.json({ success: false, error: error.message });
+    handleError(res, error);
   }
 });
 
@@ -208,30 +251,30 @@ app.post("/send-sms", async (req, res) => {
   const { to, message } = req.body;
 
   try {
-    const response = await axios.get(
-      `https://platform.clickatell.com/messages/http/send`,
-      {
-        params: {
-          apiKey: process.env.CLICKATELL_API_KEY,
-          to: to,
-          content: message
-        }
-      }
-    );
-
-    const data = response.data;
+    const data = await sendSMS(to, message);
 
     if (data.messages && data.messages[0].accepted) {
-      res.status(200).json({ success: true });
+      sendResponse(res, 200, { success: true });
     } else {
-      res.status(500).json({ success: false, error: "Failed to send SMS" });
+      sendResponse(res, 500, { success: false, error: "Failed to send SMS" });
     }
   } catch (error) {
-    console.error("Error sending SMS:", error);
-    res.status(500).json({ success: false, error: error.message });
+    handleError(res, error);
   }
 });
 
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+
+/**
+   * @description format phone numbers
+   * @param {string} number
+   * @returns string
+   */
+function formatCellNumber(number) {
+  if (number.startsWith("0")) {
+    return "27" + number.slice(1);
+  }
+  return number;
+}
