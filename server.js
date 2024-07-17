@@ -2,11 +2,20 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const Order = require("./models/order"); 
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const Order = require("./models/order");
+const TokenBlacklist = require("./models/tokenBlacklist");
+const Login = require("./models/login");
 const WebSocket = require("ws");
 const http = require("http");
 const axios = require("axios");
+const { hashPassword, comparePassword } = require("./utils/bcryptUtils");
+const authenticate = require("./middleware/auth");
+const generateUniquePin = require("./utils/generateUniquePin");
+const formatCellNumber = require("./utils/formatCellNumber");
 
+// load .env file to be used
 require("dotenv").config();
 
 const app = express();
@@ -20,7 +29,7 @@ const allowedOrigins =
   process.env.NODE_ENV === "production" ? prodUrls : devUrls;
 
 const corsOptions = {
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
       callback(null, true);
     } else {
@@ -162,7 +171,7 @@ app.get("/orders/:orderNumber", async (req, res) => {
   }
 });
 
-app.put("/orders/:id", async (req, res) => {
+app.put("/orders/:id", authenticate, async (req, res) => {
   const { id } = req.params;
   const updateData = req.body;
 
@@ -182,7 +191,7 @@ app.put("/orders/:id", async (req, res) => {
   }
 });
 
-app.delete("/orders/:id", async (req, res) => {
+app.delete("/orders/:id", authenticate, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -201,7 +210,7 @@ app.delete("/orders/:id", async (req, res) => {
     const phone = formatCellNumber(originalPhone);
 
     const message = `Dear ${name}, your order no: ${orderNumber} has been fulfilled. Boitekong Eats 😋`;
-    
+
     const data = await sendSMS(phone, message);
 
     if (data.messages && data.messages[0].accepted) {
@@ -263,18 +272,88 @@ app.post("/send-sms", async (req, res) => {
   }
 });
 
+// Endpoint to handle user signup
+app.post("/signup", async (req, res) => {
+  const { username } = req.body;
+
+  try {
+    // Check if the username already exists
+    const existingUser = await Login.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ error: "Username already exists" });
+    }
+
+    // Generate a unique PIN
+    const pin = await generateUniquePin();
+
+    // Hash the PIN before saving
+
+    const hashedPin = await hashPassword(pin);
+
+    // Create a new user with username and hashed PIN
+    const newUser = new Login({ username, pin: hashedPin });
+
+    // Save the new user
+    await newUser.save();
+
+    // Generate a JWT token
+    const token = jwt.sign({ username }, process.env.JWT_SECRET, {
+      expiresIn: "1h"
+    });
+
+    res
+      .status(201)
+      .json({ message: "User signed up successfully", username, pin, token });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Failed to sign up user" });
+  }
+});
+
+app.post("/login", async (req, res) => {
+  const { username, pin } = req.body;
+
+  try {
+    // Find the user by username
+    const user = await Login.findOne({ username });
+    if (!user) {
+      return res.status(400).json({ error: "Invalid username or PIN" });
+    }
+
+    const isPinValid = await comparePassword(pin, user.pin);
+    if (!isPinValid) {
+      return res.status(400).json({ error: "Invalid username or PIN" });
+    }
+
+    // Generate a JWT token
+    const token = jwt.sign({ username }, process.env.JWT_SECRET, {
+      expiresIn: "1h"
+    });
+
+    res.status(200).json({ message: "Login successful", token });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Failed to login user" });
+  }
+});
+
+
+
+app.post("/logout", authenticate, async (req, res) => {
+  const token = req.headers['authorization'].split(" ")[1];
+
+  try {
+    // Add the token to the blacklist
+    const blacklistedToken = new TokenBlacklist({ token });
+    await blacklistedToken.save();
+
+    res.status(200).json({ message: "Logout successful" });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Failed to logout user" });
+  }
+});
+
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-
-/**
-   * @description format phone numbers
-   * @param {string} number
-   * @returns string
-   */
-function formatCellNumber(number) {
-  if (number.startsWith("0")) {
-    return "27" + number.slice(1);
-  }
-  return number;
-}
