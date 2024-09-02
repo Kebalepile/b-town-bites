@@ -1,18 +1,33 @@
 const mongoose = require("mongoose");
 
-const orderSchema = new mongoose.Schema({
-  orderNumber: { type: String, unique: true, required: true },
-  name: { type: String, required: true },
-  phone: { type: String, required: true },
-  streetAddress: { type: String },
-  houseNumber: { type: String },
-  paymentMethod: { type: String, required: true },
-  paymentTotal: { type: Number, required: true },
-  deliveryCharge: { type: Number, required: true },
-  paymentItemsDescriptions: { type: String, required: true },
-  status: { type: String, default: "Pending" }, // e.g., Pending, Completed, Cancelled
-  timestamp: { type: Date, default: Date.now }
-});
+const orderSchema = new mongoose.Schema(
+  {
+    cookId: [String], // Array of strings
+    orderNumber: { type: String, unique: true, required: true },
+    name: { type: String, required: true },
+    phone: { type: String, required: true, match: /^\d{10}$/ },
+    streetAddress: { type: String },
+    houseNumber: { type: String },
+    paymentMethod: {
+      type: String,
+      required: true,
+      enum: ["cash", "self-collect", "online", "online-delivery"]
+    },
+    paymentTotal: { type: Number, required: true },
+    deliveryCharge: { type: Number, required: true },
+    paymentItemsDescriptions: { type: String, required: true },
+    status: {
+      type: String,
+      default: "Pending",
+      enum: ["Pending", "Completed", "Cancelled"]
+    }
+  },
+  { timestamps: true }
+);
+
+orderSchema.index({ orderNumber: 1 });
+orderSchema.index({ phone: 1 });
+orderSchema.index({ status: 1 });
 
 const Order = mongoose.model("Order", orderSchema);
 
