@@ -1,6 +1,6 @@
-# Julia's Kitchen
+# Boitekong Eats
 
-Welcome to Julia's Kitchen, your go-to web app for homemade fast food! We specialize in offering a variety of delicious homemade dishes and drinks, all available for prepaid order.
+Welcome to Boitekong Eats, your go-to web app for homemade fast food! We specialize in offering a variety of delicious homemade dishes and drinks, all available for prepaid order.
 
 ## Menu Highlights
 
@@ -28,7 +28,7 @@ Welcome to Julia's Kitchen, your go-to web app for homemade fast food! We specia
 
 ### Prerequisites
 
-To run Julia's Kitchen locally, you'll need to have the following installed:
+To run Boitekong Eats locally, you'll need to have the following installed:
 
 - [Node.js](https://nodejs.org/)
 - [MongoDB](https://www.mongodb.com/)
@@ -61,11 +61,11 @@ To run Julia's Kitchen locally, you'll need to have the following installed:
     ```sh
     npm run app
     ```
-2. Open your browser and go to `http://localhost:5000` to access Julia's Kitchen.
+2. Open your browser and go to `http://localhost:5000` to access Boitekong Eats.
 
 ## Contributing
 
-We welcome contributions! If you'd like to contribute to Julia's Kitchen, please follow these steps:
+We welcome contributions! If you'd like to contribute to Boitekong Eats, please follow these steps:
 
 1. Fork the repository.
 2. Create a new branch:
