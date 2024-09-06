@@ -22,7 +22,7 @@ const authenticate = async (req, res, next) => {
     req.user = decoded; // Attach user info to the request object
     next();
   } catch (error) {
-    console.error("Error:", error);
+    // console.error("Error:", error);
     res.status(500).json({ error: "Failed to authenticate token" });
   }
 };

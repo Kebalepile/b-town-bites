@@ -42,7 +42,7 @@ wss.on("connection", async ws => {
     ws.send(
       JSON.stringify({
         type: "connected",
-        message: "connect to BoitekongEats server"
+        message: "connected to BoitekongEats server"
       })
     );
   } catch (error) {
