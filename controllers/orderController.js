@@ -184,7 +184,20 @@ const updateOrder = async (req, res) => {
       ];
     };
 
-    if (order.status.trim().toLowerCase() === "ready") {
+    if(order.status.trim().toLowerCase() === "process"){
+      // alert cook to make order
+      // change when having more than one cook 
+      const phone = formatCellNumber("0813310276")
+      const storeResponse = await clickatellApi(phone, `new order ${order.orderNumber} at BoitekongEats, check order board for details` )
+      if (
+        !storeResponse.messages ||
+        !storeResponse.messages[0].accepted
+      ) {
+        return sendResponse(res,503, { message: "🚫 Failed to send SMS to customer" });
+      }
+    
+    }
+      else if (order.status.trim().toLowerCase() === "ready") {
       const [statusCode, statusMessage] = await smsNotification(order);
 
       if (statusCode === 503) {
