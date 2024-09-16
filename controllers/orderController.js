@@ -40,7 +40,7 @@ const createOrder = async (req, res) => {
 
   // Determine the status based on paymentTotal
   // If paymentTotal is less than 50, set status to 'Process'
-  const status = paymentTotal < 50 ? "Process" : "Pending"; 
+  const status = paymentTotal < 50 ? "Process" : "Pending";
 
   const newOrder = new Order({
     cookId,
@@ -53,7 +53,7 @@ const createOrder = async (req, res) => {
     paymentTotal,
     deliveryCharge,
     paymentItemsDescriptions,
-    status, 
+    status,
     timestamp: new Date()
   });
 
@@ -184,25 +184,32 @@ const updateOrder = async (req, res) => {
       ];
     };
 
-    if(order.status.trim().toLowerCase() === "process"){
+    if (order.status.trim().toLowerCase() === "process") {
       // alert cook to make order
-      // change when having more than one cook 
-      const phone = formatCellNumber("0813310276")
-      const storeResponse = await clickatellApi(phone, `new order ${order.orderNumber} at BoitekongEats, check order board for details` )
-      if (
-        !storeResponse.messages ||
-        !storeResponse.messages[0].accepted
-      ) {
-        return sendResponse(res,503, { message: "🚫 Failed to send SMS to customer" });
+      
+      const phoneBook = {
+        charmaine: "0813310276"
+      };
+
+      for (let cookId of order.cookId) {
+        const phone = formatCellNumber(phoneBook[cookId])
+        const storeResponse = await clickatellApi(phone, `new order ${order.orderNumber} at BoitekongEats, check order board for details`)
+        if (
+          !storeResponse.messages ||
+          !storeResponse.messages[0].accepted
+        ) {
+          return sendResponse(res, 503, { message: "🚫 Failed to send SMS to customer" });
+        }
       }
-    
+
     }
-      else if (order.status.trim().toLowerCase() === "ready") {
+    else if (order.status.trim().toLowerCase() === "ready") {
       const [statusCode, statusMessage] = await smsNotification(order);
 
       if (statusCode === 503) {
         return sendResponse(res, 503, statusMessage);
       }
+
     }
 
     // Get the origin URL from the request
