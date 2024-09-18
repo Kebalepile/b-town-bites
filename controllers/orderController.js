@@ -186,30 +186,45 @@ const updateOrder = async (req, res) => {
 
     if (order.status.trim().toLowerCase() === "process") {
       // alert cook to make order
-      
       const phoneBook = {
         charmaine: "0813310276"
       };
-
       for (let cookId of order.cookId) {
-        const phone = formatCellNumber(phoneBook[cookId])
-        const storeResponse = await clickatellApi(phone, `new order ${order.orderNumber} at BoitekongEats, check order board for details`)
-        if (
-          !storeResponse.messages ||
-          !storeResponse.messages[0].accepted
-        ) {
-          return sendResponse(res, 503, { message: "🚫 Failed to send SMS to customer" });
+        const phone = formatCellNumber(phoneBook[cookId]);
+        const storeResponse = await clickatellApi(
+          phone,
+          `new order ${order.orderNumber} at BoitekongEats, check order dashboard for details`
+        );
+        if (!storeResponse.messages || !storeResponse.messages[0].accepted) {
+          return sendResponse(res, 503, {
+            message: "🚫 Failed to send SMS to customer"
+          });
         }
       }
-
-    }
-    else if (order.status.trim().toLowerCase() === "ready") {
+    } else if (order.status.trim().toLowerCase() === "ready") {
       const [statusCode, statusMessage] = await smsNotification(order);
 
       if (statusCode === 503) {
         return sendResponse(res, 503, statusMessage);
       }
+      // Prepare customer message based on payment method
+      const paymentMethod = order.paymentMethod.toLowerCase();
+      const baseMessage = `${order.name},order: ${order.orderNumber}, has been notifed via sms at ${order.phone}, that order is ready for:`;
+      let alertMessage = "";
+      if (["online", "self-collect"].includes(paymentMethod)) {
+        alertMessage = `${baseMessage} self-collection.`;
+      } else if (["cash", "online-delivery"].includes(paymentMethod)) {
+        alertMessage = `${baseMessage} delivery.`;
+      }
+      const origin = req.get("origin");
 
+      notifyClients(origin, {
+        type: "updateOrder",
+        order: updatedOrder,
+        alert: alertMessage
+      });
+      sendResponse(res, 200, { alert: alertMessage, updatedOrder });
+      return;
     }
 
     // Get the origin URL from the request
