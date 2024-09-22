@@ -39,8 +39,8 @@ const createOrder = async (req, res) => {
   }
 
   // Determine the status based on paymentTotal
-  // If paymentTotal is less than 50, set status to 'Process'
-  const status = paymentTotal < 50 ? "Process" : "Pending";
+  // If paymentTotal is less than 200, set status to 'Process'
+  const status = paymentTotal < 200 ? "Process" : "Pending";
 
   const newOrder = new Order({
     cookId,
