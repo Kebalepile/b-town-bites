@@ -263,7 +263,6 @@ const deleteOrder = async (req, res) => {
     } else {
       console.error("Failed to send SMS");
     }
-
     // Get the origin URL from the request
     const origin = req.get("origin");
     notifyClients(origin, { type: "deleteOrder", orderId: id });
