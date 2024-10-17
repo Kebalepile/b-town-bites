@@ -39,7 +39,7 @@ const createOrder = async (req, res) => {
   }
 
   // Determine the status based on paymentTotal
-  // If paymentTotal is less than 200, set status to 'Process'
+  // If paymentTotal is less than 50, set status to 'Process'
   const status = paymentTotal < 200 ? "Process" : "Pending";
 
   const newOrder = new Order({
@@ -263,6 +263,7 @@ const deleteOrder = async (req, res) => {
     } else {
       console.error("Failed to send SMS");
     }
+
     // Get the origin URL from the request
     const origin = req.get("origin");
     notifyClients(origin, { type: "deleteOrder", orderId: id });
