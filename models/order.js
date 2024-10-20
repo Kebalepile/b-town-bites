@@ -6,6 +6,9 @@ const orderSchema = new mongoose.Schema(
     orderNumber: { type: String, unique: true, required: true },
     name: { type: String, required: true },
     phone: { type: String, required: true, match: /^\d{10}$/ },
+    checkoutId:{type:String},
+    redirectUrl:{type:String},
+    notificationsSent:{type:Boolean},
     streetAddress: { type: String },
     houseNumber: { type: String },
     paymentMethod: {

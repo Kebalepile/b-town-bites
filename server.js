@@ -10,11 +10,14 @@ const http = require("http");
 
 // load .env file to be used
 require("dotenv").config();
-
+// routes
 const orderRoutes = require("./routes/orderRoutes");
 const authRoutes = require("./routes/authRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const smsRoutes = require("./routes/smsRoutes");
+// webhooks
+const paymentsWebhook = require("./webhooks/paymentsWebhook")
+const registerWebhook = require("./utils/registerWebhook")
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -28,6 +31,10 @@ mongoose.connect(process.env.MONGO_URI);
 
 mongoose.connection.on("connected", () => {
   console.log("Connected to MongoDB");
+});
+
+mongoose.connection.on("error", (err) => {
+  console.error(`MongoDB connection error: ${err}`);
 });
 
 // Server setup
@@ -50,12 +57,20 @@ wss.on("connection", async ws => {
   }
 });
 
+wss.on("error", (error) => {
+  console.error("WebSocket error:", error);
+});
+
+
 // Routes setup
 app.use(orderRoutes);
 app.use(authRoutes);
 app.use(paymentRoutes);
 app.use(smsRoutes);
 
+// Webhooks setup
+app.use(paymentsWebhook);
+registerWebhook()
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });

@@ -133,9 +133,8 @@ const updateOrder = async (req, res) => {
       let customerMessage = "";
 
       const collectionLocation = {
-        charmi: "2278 Betlhakwe St, Boitekong Ext2, Rustenburg",
-        charmaine: "2278 Betlhakwe St, Boitekong Ext2, Rustenburg",
-        boitekongEats: "2379 Windsa St, Boitekong Ext2, Rustenburg"
+        charmaine: process.env.ADDR_CHARMAINE,
+        boitekongEats: process.env.ADDR_BOITEKONG_EAT
       };
 
       const paymentMethod = order.paymentMethod.toLowerCase();
@@ -143,7 +142,7 @@ const updateOrder = async (req, res) => {
 
       if (order.deliveryCharge > 0) {
         const deliveryMessage = `BoitekongEats order:${order.orderNumber} is ready for delivery!`;
-        const deliveryPhone = formatCellNumber("0698488813");
+        const deliveryPhone = formatCellNumber(process.env.DELIVERY_PHONE);
         const deliveryResponse = await clickatellApi(
           deliveryPhone,
           deliveryMessage
@@ -187,7 +186,7 @@ const updateOrder = async (req, res) => {
     if (order.status.trim().toLowerCase() === "process") {
       // alert cook to make order
       const phoneBook = {
-        charmaine: "0813310276"
+        charmaine: process.env.CHARMAINE_PHONE
       };
       for (let cookId of order.cookId) {
         const phone = formatCellNumber(phoneBook[cookId]);
