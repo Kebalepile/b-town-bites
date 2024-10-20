@@ -145,7 +145,7 @@ const PaymentGateWay = async (req, res) => {
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.YOCO_TEST_SECRET_KEY}`
+          Authorization: `Bearer ${process.env.YOCO_SECRET_KEY}`
         }
       }
     );
