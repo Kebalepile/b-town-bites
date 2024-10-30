@@ -15,9 +15,11 @@ const orderRoutes = require("./routes/orderRoutes");
 const authRoutes = require("./routes/authRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const smsRoutes = require("./routes/smsRoutes");
+const customerRoutes = require("./routes/customerRoutes");
+
 // webhooks
-const paymentsWebhook = require("./webhooks/paymentsWebhook")
-const registerWebhook = require("./utils/registerWebhook")
+const paymentsWebhook = require("./webhooks/paymentsWebhook");
+const registerWebhook = require("./utils/registerWebhook");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -33,7 +35,7 @@ mongoose.connection.on("connected", () => {
   console.log("Connected to MongoDB");
 });
 
-mongoose.connection.on("error", (err) => {
+mongoose.connection.on("error", err => {
   console.error(`MongoDB connection error: ${err}`);
 });
 
@@ -57,20 +59,20 @@ wss.on("connection", async ws => {
   }
 });
 
-wss.on("error", (error) => {
+wss.on("error", error => {
   console.error("WebSocket error:", error);
 });
-
 
 // Routes setup
 app.use(orderRoutes);
 app.use(authRoutes);
 app.use(paymentRoutes);
 app.use(smsRoutes);
+app.use(customerRoutes);
 
 // Webhooks setup
 app.use(paymentsWebhook);
-registerWebhook()
+registerWebhook();
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
